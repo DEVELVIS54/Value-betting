@@ -1,0 +1,251 @@
+# src/kelly.py
+"""
+Calcul de la mise optimale via le Critère de Kelly fractionné
+Maximise la croissance du bankroll sans risquer la ruine
+"""
+
+import logging
+from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
+
+
+def kelly_criterion_fraction(
+    win_probability: float,
+    bookmaker_odds: float,
+    fraction: float = 0.25
+) -> float:
+    """Calcule la mise optimale via Fractional Kelly
+    
+    Formule Kelly classique :
+    f* = (bp - q) / b
+    où :
+    - b = odds - 1 (rapport gain/mise)
+    - p = probabilité de victoire
+    - q = 1 - p (probabilité de perte)
+    
+    Fractional Kelly réduit le risque :
+    f_fraction = f* / fraction_divisor
+    
+    Exemple :
+    - AI : 55% (win_prob = 0.55)
+    - Cote : 2.10 (b = 1.10)
+    - Kelly classique : f* = (1.10 * 0.55 - 0.45) / 1.10 = 0.045 = 4.5%
+    - Kelly/4 : 4.5% / 4 = 1.125% du bankroll
+    
+    Args:
+        win_probability: Probabilité de victoire (0-1)
+        bookmaker_odds: Cote du bookmaker (>1)
+        fraction: Diviseur de Kelly (défaut 0.25 = Kelly/4, très conservateur)
+    
+    Returns:
+        Pourcentage du bankroll à miser (ex: 0.01125 = 1.125%)
+    """
+    
+    if win_probability <= 0 or win_probability >= 1 or bookmaker_odds <= 1:
+        return 0.0
+    
+    # Calcul des paramètres
+    b = bookmaker_odds - 1  # Rapport gain/mise
+    p = win_probability
+    q = 1 - p
+    
+    # Kelly classique
+    kelly_percent = (b * p - q) / b
+    
+    # Clamp entre 0 et 100%
+    kelly_percent = max(0, min(kelly_percent, 1.0))
+    
+    # Fractional Kelly (sécurité)
+    fractional_kelly = kelly_percent / fraction
+    
+    return fractional_kelly
+
+
+def calculate_optimal_stake(
+    bankroll: float,
+    win_probability: float,
+    bookmaker_odds: float,
+    min_stake: float = 1.0,
+    max_stake: float = 100.0,
+    kelly_fraction: float = 0.25
+) -> Dict:
+    """Calcule la mise optimale basée sur le bankroll
+    
+    Args:
+        bankroll: Capital disponible (ex: 1000€)
+        win_probability: Probabilité IA de victoire
+        bookmaker_odds: Cote bookmaker
+        min_stake: Mise minimale (ex: 1€)
+        max_stake: Mise maximale (ex: 100€)
+        kelly_fraction: Diviseur Kelly (défaut 0.25)
+    
+    Returns:
+        Dict avec :
+        - stake_recommended: Mise conseillée
+        - kelly_percent: % du bankroll (Kelly/4)
+        - potential_profit: Gain potentiel
+        - potential_loss: Perte potentielle
+        - roi: Return On Investment si victoire
+    """
+    
+    # Calcule le % Kelly/4
+    kelly_pct = kelly_criterion_fraction(win_probability, bookmaker_odds, kelly_fraction)
+    
+    # Mise basée sur le % Kelly
+    stake = bankroll * kelly_pct
+    
+    # Clamp entre min et max
+    stake = max(min_stake, min(stake, max_stake))
+    
+    # Calculs financiers
+    potential_profit = stake * (bookmaker_odds - 1)
+    potential_loss = stake
+    roi = (potential_profit / stake) * 100 if stake > 0 else 0
+    
+    return {
+        'stake_recommended': round(stake, 2),
+        'kelly_percent': round(kelly_pct * 100, 3),
+        'potential_profit': round(potential_profit, 2),
+        'potential_loss': round(potential_loss, 2),
+        'roi_if_win': round(roi, 2),
+        'odds_decimal': round(bookmaker_odds, 2),
+        'win_probability': round(win_probability * 100, 2)
+    }
+
+
+def calculate_stakes_for_bets(
+    value_bets: list,
+    bankroll: float,
+    kelly_fraction: float = 0.25
+) -> list:
+    """Ajoute les calculs Kelly à chaque value bet
+    
+    Args:
+        value_bets: Liste des value bets détectés
+        bankroll: Capital disponible
+        kelly_fraction: Diviseur Kelly
+    
+    Returns:
+        Liste des value bets augmentée avec stake_info
+    """
+    
+    for bet in value_bets:
+        ai_prob = bet['ai_probability']
+        odds = bet['odds']
+        
+        stake_info = calculate_optimal_stake(
+            bankroll=bankroll,
+            win_probability=ai_prob,
+            bookmaker_odds=odds,
+            min_stake=1.0,
+            max_stake=100.0,
+            kelly_fraction=kelly_fraction
+        )
+        
+        bet['stake_info'] = stake_info
+        bet['recommended_stake'] = stake_info['stake_recommended']
+    
+    logger.info(f"✅ Mises Kelly/4 calculées pour {len(value_bets)} paris")
+    return value_bets
+
+
+def validate_bankroll_safety(value_bets: list, bankroll: float) -> Dict:
+    """Vérifie que les mises cumulées ne dépassent pas 25% du bankroll
+    
+    Règle d'or : risque total <= 25% du capital
+    
+    Args:
+        value_bets: Liste des value bets avec stakes
+        bankroll: Capital disponible
+    
+    Returns:
+        Dict avec :
+        - total_stake: Somme des mises
+        - pct_of_bankroll: % du bankroll exposé
+        - is_safe: True si <= 25%
+        - max_loss_scenario: Perte max si tous les paris perdent
+    """
+    
+    total_stake = sum(bet.get('recommended_stake', 0) for bet in value_bets)
+    pct_exposed = (total_stake / bankroll) * 100 if bankroll > 0 else 0
+    
+    is_safe = pct_exposed <= 25.0
+    
+    logger.info(f"Bankroll Safety Check:")
+    logger.info(f"  Capital: ${bankroll:.2f}")
+    logger.info(f"  Mises totales: ${total_stake:.2f}")
+    logger.info(f"  Exposition: {pct_exposed:.1f}%")
+    logger.info(f"  Status: {'✅ SAFE' if is_safe else '⚠️ RISQUÉ'}")
+    
+    return {
+        'total_stake': round(total_stake, 2),
+        'pct_of_bankroll': round(pct_exposed, 2),
+        'is_safe': is_safe,
+        'max_loss_scenario': round(total_stake, 2),
+        'max_loss_pct': round(pct_exposed, 2)
+    }
+
+
+def print_kelly_summary(value_bets: list, bankroll: float):
+    """Affiche un résumé des calculs Kelly dans la console
+    
+    Args:
+        value_bets: Liste des value bets
+        bankroll: Capital disponible
+    """
+    
+    logger.info("="*70)
+    logger.info("RÉSUMÉ KELLY/4 - MISES OPTIMALES")
+    logger.info("="*70)
+    
+    for i, bet in enumerate(value_bets[:10], 1):  # Top 10
+        stake_info = bet.get('stake_info', {})
+        
+        logger.info(f"\n{i}. {bet['match']} - {bet['selection']}")
+        logger.info(f"   EV: {bet['ev_percent']:.2f}% | Cote: {stake_info.get('odds_decimal', bet['odds'])}")
+        logger.info(f"   Mise: ${stake_info.get('stake_recommended', 0):.2f} ({stake_info.get('kelly_percent', 0):.2f}% Kelly/4)")
+        logger.info(f"   Gain potentiel: ${stake_info.get('potential_profit', 0):.2f}")
+        logger.info(f"   ROI si victoire: {stake_info.get('roi_if_win', 0):.2f}%")
+    
+    safety = validate_bankroll_safety(value_bets, bankroll)
+    
+    logger.info(f"\n{'='*70}")
+    logger.info(f"BANKROLL SUMMARY")
+    logger.info(f"{'='*70}")
+    logger.info(f"Capital: ${bankroll:.2f}")
+    logger.info(f"Mises totales: ${safety['total_stake']:.2f}")
+    logger.info(f"Exposition: {safety['pct_of_bankroll']:.2f}%")
+    logger.info(f"Perte max: ${safety['max_loss_scenario']:.2f}")
+    logger.info(f"Status: {'✅ SAFE' if safety['is_safe'] else '⚠️ RISQUÉ'}")
+    logger.info(f"{'='*70}\n")
+
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s"
+    )
+    
+    # Test avec un exemple
+    test_bets = [
+        {
+            'match': 'Lakers vs Celtics',
+            'selection': 'Lakers',
+            'odds': 2.10,
+            'ai_probability': 0.55,
+            'ev_percent': 15.5
+        },
+        {
+            'match': 'Nets vs Heat',
+            'selection': 'Over 215',
+            'odds': 1.85,
+            'ai_probability': 0.58,
+            'ev_percent': 7.3
+        }
+    ]
+    
+    bankroll = 1000.0
+    
+    test_bets = calculate_stakes_for_bets(test_bets, bankroll, kelly_fraction=0.25)
+    print_kelly_summary(test_bets, bankroll)
