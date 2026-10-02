@@ -1,0 +1,76 @@
+2026-10-01 22:39:42,070 [INFO] pkl: 14429 matchs, dernier match 2026-04-12 | cible 2026-09-30 | saison 2025-26
+2026-10-01 22:40:01,801 [WARNING] Essai 1/4 2026-04-02->2026-09-30: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-10-01 22:40:36,051 [WARNING] Essai 2/4 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 22:41:14,324 [WARNING] Essai 3/4 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 22:41:52,177 [WARNING] Essai 4/4 2026-04-02->2026-09-30: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-10-01 22:42:24,179 [ERROR] Echec: nba_api indisponible: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+Traceback (most recent call last):
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 412, in main
+    return run(args)
+           ^^^^^^^^^
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 350, in run
+    raw = fetch_range(args.season, start, target)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 175, in fetch_range
+    raise RuntimeError(f"nba_api indisponible: {last_err}")
+RuntimeError: nba_api indisponible: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-10-01 22:47:07,911 [INFO] pkl: 14429 matchs, dernier match 2026-04-12 | cible 2026-09-30 | saison 2025-26
+2026-10-01 22:47:38,261 [WARNING] Essai 1/4 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 22:48:12,614 [WARNING] Essai 2/4 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 22:48:40,249 [WARNING] Essai 3/4 2026-04-02->2026-09-30: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-10-01 22:49:26,597 [WARNING] Essai 4/4 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 22:49:58,598 [ERROR] Echec: nba_api indisponible: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+Traceback (most recent call last):
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 429, in main
+    return run(args)
+           ^^^^^^^^^
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 367, in run
+    raw = fetch_range(args.season, start, target)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 192, in fetch_range
+    raise RuntimeError(f"nba_api indisponible: {last_err}")
+RuntimeError: nba_api indisponible: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 22:55:26,909 [INFO] pkl: 14429 matchs, dernier match 2026-04-12 | cible 2026-09-30 | saison 2025-26
+2026-10-01 22:55:53,474 [WARNING] Essai 1/4 2026-04-02->2026-09-30: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-10-01 22:56:27,936 [WARNING] Essai 2/4 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 22:57:06,396 [WARNING] Essai 3/4 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 22:57:50,915 [WARNING] Essai 4/4 2026-04-02->2026-09-30: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-10-01 22:58:22,916 [ERROR] Echec: nba_api indisponible: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+Traceback (most recent call last):
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 429, in main
+    return run(args)
+           ^^^^^^^^^
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 367, in run
+    raw = fetch_range(args.season, start, target)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 192, in fetch_range
+    raise RuntimeError(f"nba_api indisponible: {last_err}")
+RuntimeError: nba_api indisponible: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-10-01 23:02:39,728 [INFO] pkl: 14429 matchs, dernier match 2026-04-12 | cible 2026-09-30 | saison 2025-26
+2026-10-01 23:03:07,805 [WARNING] Essai 1/6 2026-04-02->2026-09-30: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-10-01 23:03:48,247 [WARNING] Essai 2/6 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 23:04:31,870 [WARNING] Essai 3/6 2026-04-02->2026-09-30: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-10-01 23:05:32,332 [WARNING] Essai 4/6 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 23:06:42,823 [WARNING] Essai 5/6 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 23:08:03,268 [WARNING] Essai 6/6 2026-04-02->2026-09-30: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 23:09:03,270 [ERROR] Echec: nba_api indisponible: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+Traceback (most recent call last):
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 429, in main
+    return run(args)
+           ^^^^^^^^^
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 367, in run
+    raw = fetch_range(args.season, start, target)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\elvis\Desktop\sports-betting-ml\sports_betting_ml\update_history.py", line 192, in fetch_range
+    raise RuntimeError(f"nba_api indisponible: {last_err}")
+RuntimeError: nba_api indisponible: HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)
+2026-10-01 23:11:06,344 [INFO] pkl: 14429 matchs, dernier match 2026-04-12 | cible 2026-09-30 | saison 2025-26
+2026-10-01 23:11:09,417 [INFO] Reconciliation OK sur 87 matchs existants
+2026-10-01 23:11:09,748 [INFO] AUDIT OK | 0 nouveaux matchs | passe inchange | independance verifiee
+2026-10-01 23:11:09,748 [INFO] [DRY-RUN] 0 nouveaux matchs, 14429 -> 14429 lignes, rien ecrit.
+2026-10-01 23:12:53,036 [INFO] pkl: 14429 matchs, dernier match 2026-04-12 | cible 2026-09-30 | saison 2026-27
+2026-10-01 23:12:56,765 [INFO] AUDIT OK | 0 nouveaux matchs | passe inchange | independance verifiee
+2026-10-01 23:12:56,787 [INFO] OK nba_with_features.pkl: 14429 -> 14429 matchs, 37 colonnes
+2026-10-01 23:16:47,111 [INFO] pkl: 14429 matchs, dernier match 2026-04-12 | cible 2026-09-30 | saison 2026-27
+2026-10-01 23:16:51,147 [INFO] AUDIT OK | 0 nouveaux matchs | passe inchange | independance verifiee
+2026-10-01 23:16:51,217 [INFO] OK nba_with_features.pkl: 14429 -> 14429 matchs, 37 colonnes

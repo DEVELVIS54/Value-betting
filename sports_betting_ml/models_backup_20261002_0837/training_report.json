@@ -1,0 +1,76 @@
+{
+  "trained_at": "2026-10-02T08:30:19.691348+00:00",
+  "train_period": [
+    "2014-11-03",
+    "2023-04-09"
+  ],
+  "test_period": [
+    "2023-10-24",
+    "2026-04-12"
+  ],
+  "features": [
+    "home_efg_10",
+    "away_efg_10",
+    "home_tov_pct_10",
+    "away_tov_pct_10",
+    "home_reb_pct_10",
+    "away_reb_pct_10",
+    "home_ft_rate_10",
+    "away_ft_rate_10",
+    "home_net_rtg_10",
+    "away_net_rtg_10",
+    "home_efg_3",
+    "away_efg_3",
+    "home_net_rtg_3",
+    "away_net_rtg_3",
+    "home_rest_days",
+    "away_rest_days",
+    "home_b2b",
+    "away_b2b",
+    "pace_10"
+  ],
+  "models": {
+    "h2h": {
+      "n_test": 3680,
+      "accuracy": 0.6448369565217391,
+      "log_loss": 0.629727303981781,
+      "brier": 0.21966685354709625,
+      "baseline_accuracy": 0.5472826086956522,
+      "baseline_log_loss": 0.6886692022918507,
+      "n_train": 10701,
+      "n_estimators_validation": 81,
+      "test_slope": 1.4704581446449143,
+      "platt_eval_params": [
+        0.8564247117107295,
+        0.02377428105495924
+      ],
+      "platt_logloss": 0.6340344242264342,
+      "platt_gain": -0.004307120244653184,
+      "platt_active": false,
+      "n_production": 14381
+    },
+    "spreads": {
+      "n_test": 3680,
+      "mae": 11.5605175949375,
+      "baseline_mae": 12.707387910908311,
+      "bias": 0.20646125464447085,
+      "sigma": 14.703128871666472,
+      "corr": 0.4066905712959048,
+      "direction_accuracy": 0.6489130434782608,
+      "n_train": 10701,
+      "n_estimators_validation": 99,
+      "n_production": 14381
+    },
+    "totals": {
+      "n_test": 3680,
+      "mae": 15.300304665772812,
+      "baseline_mae": 17.800551221906325,
+      "bias": -3.3042333146800167,
+      "sigma": 18.93907652687109,
+      "corr": 0.3276953325623462,
+      "n_train": 10701,
+      "n_estimators_validation": 491,
+      "n_production": 14381
+    }
+  }
+}
