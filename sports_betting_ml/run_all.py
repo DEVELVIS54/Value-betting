@@ -52,13 +52,21 @@ def main() -> None:
             now = time.time()
             if now >= next_scan:
                 log("Mise a jour de l'historique")
-                run(["update_history.py"])
-                log("Scan des cotes")
-                code = run(["main.py", "scan"])
-                if code == 3:
-                    log("Quota insuffisant : scan ignoré, nouvel essai au prochain cycle")
-                elif code != 0:
-                    log(f"Scan en erreur (code {code})")
+                code_hist = run(["update_history.py"])
+                if code_hist != 0:
+                    log(f"Historique en échec (code {code_hist}) : nouvel essai dans 60 s")
+                    time.sleep(60)
+                    code_hist = run(["update_history.py"])
+                if code_hist != 0:
+                    log(f"Historique toujours en échec (code {code_hist}) : scan ignoré (aucun crédit dépensé), "
+                        "voir logs\\update_history.log")
+                else:
+                    log("Scan des cotes")
+                    code = run(["main.py", "scan"])
+                    if code == 3:
+                        log("Quota insuffisant : scan ignoré, nouvel essai au prochain cycle")
+                    elif code != 0:
+                        log(f"Scan en erreur (code {code})")
                 next_scan = time.time() + args.interval * 60
 
             if now >= next_settle:

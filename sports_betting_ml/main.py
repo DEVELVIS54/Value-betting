@@ -139,13 +139,18 @@ def cmd_settle() -> None:
         print("[settle] Tracker vide.")
         return
     df = pd.read_csv(TRACKER_PATH, dtype=str).fillna("")
+    for col in TRACKER_FIELDS:   # tracker a l'ancien format : colonnes ajoutees vides
+        if col not in df.columns:
+            df[col] = ""
     pending = df["result"] == ""
     if not pending.any():
         print("[settle] Rien à régler.")
         return
 
     today = pd.Timestamp.now(tz="UTC").tz_localize(None).normalize()
-    due = pending & (pd.to_datetime(df["game_date"], errors="coerce") <= today)
+    game_day = pd.to_datetime(df["game_date"], errors="coerce")
+    # l'API de scores ne couvre que 3 jours : au-dela, la ligne ne peut plus etre reglee (pas d'appel paye pour elle)
+    due = pending & (game_day <= today) & (game_day >= today - pd.Timedelta(days=3))
     if not due.any():
         print("[settle] Aucun match encore joué : pas d'appel API.")
         return
