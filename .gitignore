@@ -18,3 +18,10 @@ data/
 models_backup_*/
 *.pre_update.pkl
 patch_*.py
+
+# sauvegardes et scripts de patch jetables
+*.bak
+*.bak_*
+models_backup_*/
+*.pre_update.pkl
+patch_*.py
