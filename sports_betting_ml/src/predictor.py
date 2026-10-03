@@ -66,6 +66,9 @@ MAX_EV_PCT = 12.0         # au-dessus : erreur probable, signal écarté
 
 PROB_MIN, PROB_MAX = 0.02, 0.98
 
+# Totals : mode observation tant que le recentrage live n'est pas estime (biais de niveau du modele)
+TOTALS_MIN_EVENTS = 100   # matchs observes (total modele vs marche) avant d'emettre des alertes Totals
+
 # Seuil d'EV adaptatif (en %)
 EV_MIN_FAVORITE = 0.75   # cote <= 1.80
 EV_MIN_OUTSIDER = 2.00   # cote > 2.50
@@ -74,6 +77,7 @@ ODDS_FAV, ODDS_DOG = 1.80, 2.50
 TRACKER_FIELDS = [
     "logged_at", "event_id", "game_date", "home_team", "away_team", "market",
     "pick", "line", "model_prob", "fair_odds", "odds", "bookmaker", "ev_pct",
+    "model_value", "market_value",
     "alerted", "result", "correct",
 ]
 
@@ -161,6 +165,7 @@ class BasketballPredictor:
                     f"Manquantes : {missing} | En trop : {extra}. Relance model_train.py."
                 )
 
+        self._migrate_tracker()
         self._logged = self._load_logged_keys()
 
     # ----------------------------- équipes ---------------------------------- #
@@ -233,7 +238,7 @@ class BasketballPredictor:
         }
 
     # ---------------------------- événement API ----------------------------- #
-    def _candidates(self, event: Dict[str, Any], pred: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _candidates(self, event: Dict[str, Any], pred: Dict[str, Any], totals_bias: float = 0.0) -> List[Dict[str, Any]]:
         api_home, api_away = event["home_team"], event["away_team"]
         cons = self._consensus(event)
 
@@ -243,7 +248,7 @@ class BasketballPredictor:
         if cons["margin"] is not None:
             mu_m = _anchor(pred["mu_margin"], cons["margin"], W_MODEL["spreads"], MAX_DEV["spreads"])
         if cons["total"] is not None:
-            mu_t = _anchor(pred["mu_total"], cons["total"], W_MODEL["totals"], MAX_DEV["totals"])
+            mu_t = _anchor(pred["mu_total"] - totals_bias, cons["total"], W_MODEL["totals"], MAX_DEV["totals"])
         sig_m, sig_t = self.models["spreads"]["sigma"], self.models["totals"]["sigma"]
 
         out: List[Dict[str, Any]] = []
@@ -312,13 +317,22 @@ class BasketballPredictor:
             print(f"[predictor] Match ignoré ({event.get('home_team')} vs {event.get('away_team')}) : {exc}")
             return None
 
-        candidates = self._candidates(event, pred)
+        cons = self._consensus(event)
+        obs = {
+            "h2h": (pred["p_home_win"], cons["p_home"]),
+            "spreads": (pred["mu_margin"], cons["margin"]),
+            "totals": (pred["mu_total"], cons["total"]),
+        }
+        n_tot, bias_tot = self._totals_live_bias()
+        totals_active = n_tot >= TOTALS_MIN_EVENTS
+        candidates = self._candidates(event, pred, totals_bias=bias_tot if totals_active else 0.0)
         if not candidates:
             return None
 
         qualified = [
             c for c in candidates
             if min_ev_threshold(c["odds"]) <= c["ev_pct"] <= MAX_EV_PCT
+            and (c["market"] != "totals" or totals_active)
         ]
         best_alert = max(qualified, key=lambda c: c["ev_pct"]) if qualified else None
 
@@ -329,7 +343,7 @@ class BasketballPredictor:
                     continue
                 top = max(pool, key=lambda c: c["ev_pct"])
                 alerted = int(best_alert is not None and top is best_alert)
-                self._log(event, game_date, top, alerted)
+                self._log(event, game_date, top, alerted, *obs[market])
 
         if best_alert is None:
             return None
@@ -348,6 +362,9 @@ class BasketballPredictor:
         }
 
     def evaluate_events(self, events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        n_tot, bias_tot = self._totals_live_bias()
+        state = f"ACTIF (recentre de {bias_tot:+.2f} pts)" if n_tot >= TOTALS_MIN_EVENTS else "OBSERVATION (aucune alerte Totals)"
+        print(f"[predictor] Totals : {n_tot}/{TOTALS_MIN_EVENTS} matchs observes -> {state}")
         alerts = []
         for ev in events:
             alert = self.evaluate_event(ev)
@@ -372,6 +389,34 @@ class BasketballPredictor:
 
     # ------------------------------ tracker --------------------------------- #
     @staticmethod
+    def _migrate_tracker() -> None:
+        """Archive un tracker a l'ancien format (sans model_value / market_value) au lieu de melanger les schemas."""
+        if not TRACKER_PATH.exists() or TRACKER_PATH.stat().st_size == 0:
+            return
+        with open(TRACKER_PATH, newline="", encoding="utf-8") as f:
+            header = next(csv.reader(f), [])
+        if header != TRACKER_FIELDS:
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            TRACKER_PATH.rename(TRACKER_PATH.with_name(f"live_predictions_tracker_old_{stamp}.csv"))
+            print(f"[predictor] Ancien tracker archive : live_predictions_tracker_old_{stamp}.csv")
+
+    @staticmethod
+    def _totals_live_bias() -> tuple:
+        """(nb de matchs observes, moyenne de (total modele - total marche)) lue dans le tracker."""
+        if not TRACKER_PATH.exists():
+            return 0, 0.0
+        try:
+            df = pd.read_csv(TRACKER_PATH)
+        except Exception:
+            return 0, 0.0
+        if not {"market", "event_id", "model_value", "market_value"} <= set(df.columns):
+            return 0, 0.0
+        d = df[df["market"] == "totals"].drop_duplicates("event_id")
+        dev = (pd.to_numeric(d["model_value"], errors="coerce")
+               - pd.to_numeric(d["market_value"], errors="coerce")).dropna()
+        return int(len(dev)), (float(dev.mean()) if len(dev) else 0.0)
+
+    @staticmethod
     def _load_logged_keys() -> set:
         keys = set()
         if TRACKER_PATH.exists():
@@ -380,7 +425,8 @@ class BasketballPredictor:
                     keys.add((row.get("event_id"), row.get("market")))
         return keys
 
-    def _log(self, event: Dict[str, Any], game_date: pd.Timestamp, c: Dict[str, Any], alerted: int) -> None:
+    def _log(self, event: Dict[str, Any], game_date: pd.Timestamp, c: Dict[str, Any], alerted: int,
+             model_value: Optional[float] = None, market_value: Optional[float] = None) -> None:
         key = (str(event.get("id", "")), c["market"])
         if key in self._logged:
             return
@@ -404,6 +450,8 @@ class BasketballPredictor:
                 "odds": round(c["odds"], 3),
                 "bookmaker": c["bookmaker"],
                 "ev_pct": round(c["ev_pct"], 2),
+                "model_value": "" if model_value is None else round(float(model_value), 4),
+                "market_value": "" if market_value is None else round(float(market_value), 4),
                 "alerted": alerted,
                 "result": "",
                 "correct": "",

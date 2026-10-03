@@ -61,7 +61,7 @@ PLATT_MIN_GAIN = 0.002      # gain de logloss minimal sur le test pour activer l
 MARKETS: Dict[str, Tuple[str, str, float]] = {
     "h2h": ("classifier", "home_win", 0.90),
     "spreads": ("regressor", "margin", 0.90),
-    "totals": ("regressor", "total_pts", 0.90),
+    "totals": ("regressor", "total_pts", 0.75),
 }
 
 
