@@ -77,7 +77,7 @@ ODDS_FAV, ODDS_DOG = 1.80, 2.50
 TRACKER_FIELDS = [
     "logged_at", "event_id", "game_date", "home_team", "away_team", "market",
     "pick", "line", "model_prob", "fair_odds", "odds", "bookmaker", "ev_pct",
-    "model_value", "market_value",
+    "model_value", "market_value", "close_market_value", "close_lead_min",
     "alerted", "result", "correct",
 ]
 
@@ -370,6 +370,7 @@ class BasketballPredictor:
             alert = self.evaluate_event(ev)
             if alert:
                 alerts.append(alert)
+        self._update_close(events)
         alerts.sort(key=lambda a: a["ev_pct"], reverse=True)
         return alerts
 
@@ -416,6 +417,42 @@ class BasketballPredictor:
                - pd.to_numeric(d["market_value"], errors="coerce")).dropna()
         return int(len(dev)), (float(dev.mean()) if len(dev) else 0.0)
 
+    def _update_close(self, events: List[Dict[str, Any]]) -> None:
+        """Pour les matchs deja logges et pas encore commences : derniere valeur de consensus connue
+        (close_market_value) et delai avant le coup d'envoi (close_lead_min). Le dernier scan avant le match l'emporte."""
+        if not TRACKER_PATH.exists():
+            return
+        try:
+            df = pd.read_csv(TRACKER_PATH, dtype=str).fillna("")
+        except Exception:
+            return
+        if df.empty or not {"event_id", "market", "close_market_value", "close_lead_min"} <= set(df.columns):
+            return
+        now = datetime.now(timezone.utc)
+        changed = 0
+        for ev in events:
+            try:
+                lead = (datetime.fromisoformat(ev["commence_time"].replace("Z", "+00:00")) - now).total_seconds() / 60.0
+            except (KeyError, ValueError):
+                continue
+            if lead <= 0:
+                continue
+            cons = self._consensus(ev)
+            vals = {"h2h": cons["p_home"], "spreads": cons["margin"], "totals": cons["total"]}
+            eid = str(ev.get("id", ""))
+            for market, val in vals.items():
+                if val is None:
+                    continue
+                m = (df["event_id"] == eid) & (df["market"] == market)
+                if m.any():
+                    df.loc[m, "close_market_value"] = f"{val:.4f}"
+                    df.loc[m, "close_lead_min"] = f"{lead:.0f}"
+                    changed += 1
+        if changed:
+            tmp = TRACKER_PATH.with_suffix(".tmp")
+            df[TRACKER_FIELDS].to_csv(tmp, index=False, encoding="utf-8")
+            os.replace(tmp, TRACKER_PATH)
+
     @staticmethod
     def _load_logged_keys() -> set:
         keys = set()
@@ -452,6 +489,8 @@ class BasketballPredictor:
                 "ev_pct": round(c["ev_pct"], 2),
                 "model_value": "" if model_value is None else round(float(model_value), 4),
                 "market_value": "" if market_value is None else round(float(market_value), 4),
+                "close_market_value": "",
+                "close_lead_min": "",
                 "alerted": alerted,
                 "result": "",
                 "correct": "",

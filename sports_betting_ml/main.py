@@ -174,6 +174,40 @@ def cmd_settle() -> None:
     print(f"[settle] {settled} prédiction(s) réglée(s) sur {int(pending.sum())} en attente.")
 
 
+CLOSE_MAX_LEAD_MIN = 120   # une cloture n'est retenue que si le dernier scan a eu lieu <= 120 min avant le match
+
+
+def _report_market_moves(df: pd.DataFrame) -> None:
+    """Le marche bouge-t-il vers le modele ? (proxy de CLV sur la valeur de consensus, sans prix par bookmaker)."""
+    need = ["model_value", "market_value", "close_market_value", "close_lead_min"]
+    if not set(need) <= set(df.columns):
+        return
+    c = df.copy()
+    for col in need:
+        c[col] = pd.to_numeric(c[col], errors="coerce")
+    c = c.dropna(subset=need)
+    c = c[c["close_lead_min"] <= CLOSE_MAX_LEAD_MIN]
+    print(f"Mouvement du marche vers le modele (cloture <= {CLOSE_MAX_LEAD_MIN} min avant le match) : {len(c)} ligne(s)")
+    if c.empty:
+        return
+    for m in ("h2h", "spreads", "totals"):
+        d = c[c["market"] == m]
+        if len(d) < 5:
+            print(f"  {m:8s} n={len(d)} (insuffisant)")
+            continue
+        dev = d["model_value"] - d["market_value"]
+        dev = dev - dev.mean()   # retire le decalage de niveau systematique
+        move = d["close_market_value"] - d["market_value"]
+        toward = ((dev > 0).astype(int) - (dev < 0).astype(int)) * move
+        moved = toward[toward != 0]
+        share = float((moved > 0).mean()) if len(moved) else float("nan")
+        se = (0.25 / len(moved)) ** 0.5 if len(moved) else float("nan")
+        scale, unit = (100.0, "pts de proba") if m == "h2h" else (1.0, "pts")
+        print(f"  {m:8s} n={len(d):<4} a bouge={len(moved):<4} vers le modele={share:.1%} (+/-{se:.1%} sous H0) "
+              f"| deplacement moyen vers le modele={toward.mean() * scale:+.3f} {unit}")
+    print("  Lecture : ~50% = le marche n'apprend rien du modele ; nettement > 50% sur >= 100 matchs = signal d'information.")
+
+
 def cmd_report() -> None:
     if not TRACKER_PATH.exists():
         print("[report] Aucun tracker.")
@@ -184,6 +218,7 @@ def cmd_report() -> None:
     done["correct"] = done["correct"].astype(int)
 
     print(f"Prédictions loggées : {total} | réglées : {len(done)}")
+    _report_market_moves(df)
     if done.empty:
         return
 
